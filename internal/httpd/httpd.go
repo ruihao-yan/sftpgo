@@ -155,6 +155,7 @@ const (
 	webClientFilesPathDefault             = "/web/client/files"
 	webClientFilePathDefault              = "/web/client/file"
 	webClientFileActionsPathDefault       = "/web/client/file-actions"
+	webClientPastePathDefault             = "/web/client/paste"
 	webClientSharesPathDefault            = "/web/client/shares"
 	webClientSharePathDefault             = "/web/client/share"
 	webClientEditFilePathDefault          = "/web/client/editfile"
@@ -256,6 +257,7 @@ var (
 	webClientFilesPath             string
 	webClientFilePath              string
 	webClientFileActionsPath       string
+	webClientPastePath             string
 	webClientSharesPath            string
 	webClientSharePath             string
 	webClientEditFilePath          string
@@ -1278,6 +1280,7 @@ func updateWebClientURLs(baseURL string) {
 	webClientFilesPath = path.Join(baseURL, webClientFilesPathDefault)
 	webClientFilePath = path.Join(baseURL, webClientFilePathDefault)
 	webClientFileActionsPath = path.Join(baseURL, webClientFileActionsPathDefault)
+	webClientPastePath = path.Join(baseURL, webClientPastePathDefault)
 	webClientSharesPath = path.Join(baseURL, webClientSharesPathDefault)
 	webClientPubSharesPath = path.Join(baseURL, webClientPubSharesPathDefault)
 	webClientSharePath = path.Join(baseURL, webClientSharePathDefault)

@@ -190,6 +190,10 @@ const (
 	webClientTOTPSavePath          = "/web/client/totp/save"
 	webClientSharesPath            = "/web/client/shares"
 	webClientSharePath             = "/web/client/share"
+	webClientPastePath             = "/web/client/paste"
+	webClientPasteItemsPath        = "/web/client/paste/items"
+	webClientPasteTextPath         = "/web/client/paste/text"
+	webClientPasteImagePath        = "/web/client/paste/image"
 	webClientPubSharesPath         = "/web/client/pubshares"
 	webClientForgotPwdPath         = "/web/client/forgot-password"
 	webClientResetPwdPath          = "/web/client/reset-password"
@@ -17200,6 +17204,115 @@ func TestWebClientExistenceCheck(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.RemoveAll(user.GetHomeDir())
 	assert.NoError(t, err)
+}
+
+func TestWebClientPaste(t *testing.T) {
+	user, _, err := httpdtest.AddUser(getTestUser(), http.StatusCreated)
+	require.NoError(t, err)
+	defer func() {
+		_, err := httpdtest.RemoveUser(user, http.StatusOK)
+		assert.NoError(t, err)
+		assert.NoError(t, os.RemoveAll(user.GetHomeDir()))
+	}()
+
+	req, err := http.NewRequest(http.MethodGet, webClientPastePath, nil)
+	require.NoError(t, err)
+	rr := executeRequest(req)
+	checkResponseCode(t, http.StatusFound, rr)
+	assert.Equal(t, webClientLoginPath, rr.Header().Get("Location"))
+
+	webToken, err := getJWTWebClientTokenFromTestServer(defaultUsername, defaultPassword)
+	require.NoError(t, err)
+	csrfToken, err := getCSRFTokenFromInternalPageMock(webClientPastePath, webToken)
+	require.NoError(t, err)
+
+	req, err = http.NewRequest(http.MethodGet, webClientPastePath, nil)
+	require.NoError(t, err)
+	setJWTCookieForReq(req, webToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, rr)
+	assert.Contains(t, rr.Body.String(), "Paste")
+
+	reqBody := bytes.NewBuffer([]byte(`{"content":"hello paste","name":"note"}`))
+	req, err = http.NewRequest(http.MethodPost, webClientPasteTextPath, reqBody)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	setJWTCookieForReq(req, webToken)
+	setCSRFHeaderForReq(req, csrfToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusCreated, rr)
+	var createdText map[string]any
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &createdText))
+	textID := createdText["id"].(string)
+	assert.Equal(t, "text", createdText["type"])
+	assert.FileExists(t, filepath.Join(user.GetHomeDir(), "paste", "text", textID+".json"))
+
+	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	img.Set(0, 0, color.RGBA{R: 255, A: 255})
+	var imgBuf bytes.Buffer
+	require.NoError(t, png.Encode(&imgBuf, img))
+	req, err = http.NewRequest(http.MethodPost, webClientPasteImagePath+"?name=clip.png", bytes.NewReader(imgBuf.Bytes()))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "image/png")
+	setJWTCookieForReq(req, webToken)
+	setCSRFHeaderForReq(req, csrfToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusCreated, rr)
+	var createdImage map[string]any
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &createdImage))
+	imageID := createdImage["id"].(string)
+	assert.Equal(t, "image", createdImage["type"])
+	assert.FileExists(t, filepath.Join(user.GetHomeDir(), "paste", "images", imageID, "original.png"))
+
+	req, err = http.NewRequest(http.MethodGet, webClientPasteItemsPath, nil)
+	require.NoError(t, err)
+	setJWTCookieForReq(req, webToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, rr)
+	var items []map[string]any
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &items))
+	require.Len(t, items, 2)
+
+	req, err = http.NewRequest(http.MethodDelete, path.Join(webClientPastePath, textID), nil)
+	require.NoError(t, err)
+	setJWTCookieForReq(req, webToken)
+	setCSRFHeaderForReq(req, csrfToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, rr)
+	assert.NoFileExists(t, filepath.Join(user.GetHomeDir(), "paste", "text", textID+".json"))
+
+	req, err = http.NewRequest(http.MethodDelete, path.Join(webClientPastePath, imageID), nil)
+	require.NoError(t, err)
+	setJWTCookieForReq(req, webToken)
+	setCSRFHeaderForReq(req, csrfToken)
+	rr = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, rr)
+	assert.NoDirExists(t, filepath.Join(user.GetHomeDir(), "paste", "images", imageID))
+}
+
+func TestWebClientPasteWriteDisabled(t *testing.T) {
+	u := getTestUser()
+	u.Filters.WebClient = []string{sdk.WebClientWriteDisabled}
+	user, _, err := httpdtest.AddUser(u, http.StatusCreated)
+	require.NoError(t, err)
+	defer func() {
+		_, err := httpdtest.RemoveUser(user, http.StatusOK)
+		assert.NoError(t, err)
+		assert.NoError(t, os.RemoveAll(user.GetHomeDir()))
+	}()
+
+	webToken, err := getJWTWebClientTokenFromTestServer(defaultUsername, defaultPassword)
+	require.NoError(t, err)
+	csrfToken, err := getCSRFTokenFromInternalPageMock(webClientPastePath, webToken)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, webClientPasteTextPath, bytes.NewBuffer([]byte(`{"content":"blocked"}`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	setJWTCookieForReq(req, webToken)
+	setCSRFHeaderForReq(req, csrfToken)
+	rr := executeRequest(req)
+	checkResponseCode(t, http.StatusForbidden, rr)
 }
 
 func TestWebClientViewPDF(t *testing.T) {

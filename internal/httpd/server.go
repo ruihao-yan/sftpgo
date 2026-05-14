@@ -1624,6 +1624,14 @@ func (s *httpdServer) setupWebClientRoutes() {
 
 			router.Get(webClientLogoutPath, s.handleWebClientLogout)
 			router.With(s.checkAuthRequirements, s.refreshCookie).Get(webClientFilesPath, s.handleClientGetFiles)
+			router.With(s.checkAuthRequirements, s.refreshCookie).Get(webClientPastePath, s.handleClientGetPaste)
+			router.With(s.checkAuthRequirements, s.refreshCookie).Get(path.Join(webClientPastePath, "items"), getPasteItems)
+			router.With(s.checkAuthRequirements, s.checkHTTPUserPerm(sdk.WebClientWriteDisabled), s.verifyCSRFHeader).
+				Post(path.Join(webClientPastePath, "text"), createTextPaste)
+			router.With(s.checkAuthRequirements, s.checkHTTPUserPerm(sdk.WebClientWriteDisabled), s.verifyCSRFHeader).
+				Post(path.Join(webClientPastePath, "image"), createImagePaste)
+			router.With(s.checkAuthRequirements, s.checkHTTPUserPerm(sdk.WebClientWriteDisabled), s.verifyCSRFHeader).
+				Delete(webClientPastePath+"/{id}", deletePasteItem)
 			router.With(s.checkAuthRequirements, s.refreshCookie).Get(webClientViewPDFPath, s.handleClientViewPDF)
 			router.With(s.checkAuthRequirements, s.refreshCookie).Get(webClientGetPDFPath, s.handleClientGetPDF)
 			router.With(s.checkAuthRequirements, s.refreshCookie, s.verifyCSRFHeader).Get(webClientFilePath, getUserFile)

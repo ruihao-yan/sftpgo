@@ -54,6 +54,7 @@ const (
 	templateClientProfile  = "profile.html"
 	templateClientMFA      = "mfa.html"
 	templateClientEditFile = "editfile.html"
+	templateClientPaste    = "paste.html"
 	templateClientShare    = "share.html"
 	templateClientShares   = "shares.html"
 	templateClientViewPDF  = "viewpdf.html"
@@ -87,6 +88,7 @@ type baseClientPage struct {
 	Title           string
 	CurrentURL      string
 	FilesURL        string
+	PasteURL        string
 	SharesURL       string
 	ShareURL        string
 	ProfileURL      string
@@ -148,6 +150,14 @@ type filesPage struct {
 	Paths              []dirMapping
 	QuotaUsage         *userQuotaUsage
 	KeepAliveInterval  int
+}
+
+type pastePage struct {
+	baseClientPage
+	PasteItemsURL string
+	PasteTextURL  string
+	PasteImageURL string
+	FileURL       string
 }
 
 type shareLoginPage struct {
@@ -420,6 +430,11 @@ func loadClientTemplates(templatesPath string) {
 		filepath.Join(templatesPath, templateClientDir, templateClientBase),
 		filepath.Join(templatesPath, templateClientDir, templateClientFiles),
 	}
+	pastePaths := []string{
+		filepath.Join(templatesPath, templateCommonDir, templateCommonBase),
+		filepath.Join(templatesPath, templateClientDir, templateClientBase),
+		filepath.Join(templatesPath, templateClientDir, templateClientPaste),
+	}
 	editFilePath := []string{
 		filepath.Join(templatesPath, templateCommonDir, templateCommonBase),
 		filepath.Join(templatesPath, templateClientDir, templateClientBase),
@@ -501,6 +516,7 @@ func loadClientTemplates(templatesPath string) {
 	}
 
 	filesTmpl := util.LoadTemplate(nil, filesPaths...)
+	pasteTmpl := util.LoadTemplate(nil, pastePaths...)
 	profileTmpl := util.LoadTemplate(nil, profilePaths...)
 	changePwdTmpl := util.LoadTemplate(nil, changePwdPaths...)
 	loginTmpl := util.LoadTemplate(nil, loginPaths...)
@@ -519,6 +535,7 @@ func loadClientTemplates(templatesPath string) {
 	shareDownloadTmpl := util.LoadTemplate(nil, shareDownloadPath...)
 
 	clientTemplates[templateClientFiles] = filesTmpl
+	clientTemplates[templateClientPaste] = pasteTmpl
 	clientTemplates[templateClientProfile] = profileTmpl
 	clientTemplates[templateChangePwd] = changePwdTmpl
 	clientTemplates[templateCommonLogin] = loginTmpl
@@ -548,6 +565,7 @@ func (s *httpdServer) getBaseClientPageData(title, currentURL string, w http.Res
 		Title:           title,
 		CurrentURL:      currentURL,
 		FilesURL:        webClientFilesPath,
+		PasteURL:        webClientPastePath,
 		SharesURL:       webClientSharesPath,
 		ShareURL:        webClientSharePath,
 		ProfileURL:      webClientProfilePath,
@@ -1342,6 +1360,18 @@ func (s *httpdServer) handleClientGetFiles(w http.ResponseWriter, r *http.Reques
 			s.renderFilesPage(w, r, path.Dir(name), util.NewI18nError(err, i18nFsMsg(status)), &user)
 		}
 	}
+}
+
+func (s *httpdServer) handleClientGetPaste(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
+	data := pastePage{
+		baseClientPage: s.getBaseClientPageData("Paste", webClientPastePath, w, r),
+		PasteItemsURL:  path.Join(webClientPastePath, "items"),
+		PasteTextURL:   path.Join(webClientPastePath, "text"),
+		PasteImageURL:  path.Join(webClientPastePath, "image"),
+		FileURL:        webClientFilePath,
+	}
+	renderClientTemplate(w, templateClientPaste, data)
 }
 
 func (s *httpdServer) handleClientEditFile(w http.ResponseWriter, r *http.Request) {

@@ -77,6 +77,17 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
         <span data-i18n="title.files" class="menu-title">Files</span>
     </a>
 </div>
+<div class="menu-item">
+    <a class="menu-link {{- if eq .CurrentURL .PasteURL}} active{{- end}}" href="{{.PasteURL}}">
+        <span class="menu-icon">
+            <i class="ki-duotone ki-copy fs-1">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+        </span>
+        <span data-i18n="title.paste" class="menu-title">Paste</span>
+    </a>
+</div>
 {{- if .LoggedUser.CanManageShares}}
 <div class="menu-item">
     <a class="menu-link {{- if eq .CurrentURL .SharesURL}} active{{- end}}" href="{{.SharesURL}}">
