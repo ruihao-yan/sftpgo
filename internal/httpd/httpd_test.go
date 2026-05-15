@@ -17232,6 +17232,8 @@ func TestWebClientPaste(t *testing.T) {
 	rr = executeRequest(req)
 	checkResponseCode(t, http.StatusOK, rr)
 	assert.Contains(t, rr.Body.String(), "Paste")
+	assert.NotContains(t, rr.Body.String(), "Swal.fire")
+	assert.Contains(t, rr.Body.String(), "ModalAlert.fire")
 
 	reqBody := bytes.NewBuffer([]byte(`{"content":"hello paste","name":"note"}`))
 	req, err = http.NewRequest(http.MethodPost, webClientPasteTextPath, reqBody)

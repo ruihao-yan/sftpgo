@@ -174,7 +174,7 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
     }
 
     function confirmDelete(item) {
-        Swal.fire({
+        ModalAlert.fire({
             text: `Delete ${item.name || item.id}?`,
             icon: 'question',
             buttonsStyling: false,
