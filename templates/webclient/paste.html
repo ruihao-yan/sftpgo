@@ -175,10 +175,13 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
                 throw clipboardError;
             }
         }
-        showMessage({
-            content: $.t('general.copied'),
-            type: 'success',
-            duration: 2000
+        showToast(1, 'general.copied');
+    }
+
+    function showPasteError(err) {
+        ModalAlert.fire({
+            text: err.toString(),
+            icon: 'error'
         });
     }
 
@@ -246,13 +249,7 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
             row.find('.paste-text-item').text(item.content || '');
             row.find('.text-muted').text(formatPasteDate(item.created_at));
             row.find('.paste-copy').on('click', () => {
-                copyTextToClipboard(item.content || '').catch((err) => {
-                    showMessage({
-                        content: err.toString(),
-                        type: 'error',
-                        duration: 5000
-                    });
-                });
+                copyTextToClipboard(item.content || '').catch(showPasteError);
             });
             row.find('.paste-delete').on('click', () => confirmDelete(item));
             container.append(row);
@@ -293,13 +290,7 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
 
     $(document).ready(function() {
         $('#paste_action_btn').on('click', function() {
-            uploadPendingPaste().catch((err) => {
-                showMessage({
-                    content: err.toString(),
-                    type: 'error',
-                    duration: 5000
-                });
-            });
+            uploadPendingPaste().catch(showPasteError);
         });
         $('#paste_text_preview').on('input', function() {
             const content = $(this).val();
