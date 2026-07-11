@@ -155,6 +155,33 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
         return new Date(value).toLocaleString();
     }
 
+    async function copyTextToClipboard(text) {
+        try {
+            if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                throw new Error('Clipboard API is unavailable');
+            }
+            await navigator.clipboard.writeText(text);
+        } catch (clipboardError) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const copied = document.execCommand('copy');
+            textarea.remove();
+            if (!copied) {
+                throw clipboardError;
+            }
+        }
+        showMessage({
+            content: $.t('general.copied'),
+            type: 'success',
+            duration: 2000
+        });
+    }
+
     async function copyImage(path) {
         const resp = await axios.get(`${fileURL}?path=${encodeURIComponent(path)}&inline=1`, {
             responseType: 'blob',
@@ -218,7 +245,15 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
                 </div>`);
             row.find('.paste-text-item').text(item.content || '');
             row.find('.text-muted').text(formatPasteDate(item.created_at));
-            row.find('.paste-copy').on('click', () => navigator.clipboard.writeText(item.content || ''));
+            row.find('.paste-copy').on('click', () => {
+                copyTextToClipboard(item.content || '').catch((err) => {
+                    showMessage({
+                        content: err.toString(),
+                        type: 'error',
+                        duration: 5000
+                    });
+                });
+            });
             row.find('.paste-delete').on('click', () => confirmDelete(item));
             container.append(row);
         });
